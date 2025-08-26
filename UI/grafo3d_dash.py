@@ -6,18 +6,22 @@ import networkx as nx
 import numpy as np
 from Data.extraer_datos import extraer_datos
 
+# Cargar datos
 enviados, recibidos = extraer_datos("Data/DatasetRelaciones.xlsx")
 
+# Crear grafo dirigido
 G = nx.DiGraph()
 for e, r in zip(enviados, recibidos):
     G.add_edge(e, r)
 
+# Posiciones en 3D
 pos = nx.spring_layout(G, dim=3, seed=42)
 x_nodes = [pos[node][0] for node in G.nodes()]
 y_nodes = [pos[node][1] for node in G.nodes()]
 z_nodes = [pos[node][2] for node in G.nodes()]
 nodes = list(G.nodes())
 
+# Función para generar figura
 def generar_fig(nodo_seleccionado=None):
     edge_traces = []
     arrow_size = 0.05
@@ -33,14 +37,14 @@ def generar_fig(nodo_seleccionado=None):
             hoverinfo='none'
         ))
 
-    # Colores dinámicos usando BFS y degradado
+    # Colores dinámicos BFS con degradado
     colores = ['skyblue'] * len(nodes)
     if nodo_seleccionado is not None:
         distances = nx.single_source_shortest_path_length(G, nodo_seleccionado)
         max_dist = max(distances.values()) if distances else 1
         for i, n in enumerate(nodes):
             if n == nodo_seleccionado:
-                colores[i] = 'rgb(255,0,0)'
+                colores[i] = 'rgb(255,0,0)'  # Nodo seleccionado rojo
             elif n in distances:
                 ratio = distances[n] / max_dist
                 r = 255
@@ -71,21 +75,39 @@ def generar_fig(nodo_seleccionado=None):
     )
     return fig
 
+# Crear app Dash
 app = dash.Dash(__name__)
 app.layout = html.Div([
     html.H1("Grafo 3D Interactivo"),
     dcc.Graph(id='grafo3d', figure=generar_fig()),
+    html.Div(id="info-nodo", style={"marginTop": "20px", "fontSize": "18px"})
 ])
 
+# Callback para actualizar grafo + info
 @app.callback(
-    Output('grafo3d', 'figure'),
+    [Output('grafo3d', 'figure'),
+     Output('info-nodo', 'children')],
     Input('grafo3d', 'clickData')
 )
-def resaltar_vecinos(clickData):
+def actualizar(clickData):
     if clickData is None:
-        return generar_fig()
+        return generar_fig(), "Haz clic en un nodo para ver su información."
+
     nodo = clickData['points'][0]['text']
-    return generar_fig(nodo_seleccionado=nodo)
+    fig = generar_fig(nodo_seleccionado=nodo)
+
+    # Información extra
+    out_degree = G.out_degree(nodo)  # Número de aristas que salen
+    caminos = nx.single_source_shortest_path_length(G, nodo)
+    grado_camino = max(caminos.values()) if caminos else 0
+
+    info = (
+        f"Nodo seleccionado: {nodo} | "
+        f"Nodos de salida: {out_degree} | "
+        f"Grado del camino alcanzable: {grado_camino}"
+    )
+
+    return fig, info
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)
