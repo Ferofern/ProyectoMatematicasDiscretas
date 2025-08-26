@@ -12,6 +12,7 @@ G = nx.DiGraph()
 for e, r in zip(enviados, recibidos):
     G.add_edge(e, r)
 
+# Posiciones en 3D
 pos = nx.spring_layout(G, dim=3, seed=42)
 x_nodes = [pos[node][0] for node in G.nodes()]
 y_nodes = [pos[node][1] for node in G.nodes()]
@@ -21,19 +22,35 @@ nodes = list(G.nodes())
 def generar_fig(nodo_seleccionado=None):
     edge_traces = []
     arrow_size = 0.05
+
+    distances = {}
+    max_dist = 1
+    if nodo_seleccionado is not None:
+        distances = nx.single_source_shortest_path_length(G, nodo_seleccionado)
+        max_dist = max(distances.values()) if distances else 1
+
     for edge in G.edges():
         start = np.array(pos[edge[0]])
         end = np.array(pos[edge[1]])
+
+        if nodo_seleccionado is not None and edge[0] in distances and edge[1] in distances:
+            ratio = distances[edge[1]] / max_dist
+            r = 255
+            g = int(165 * ratio)
+            b = 0
+            edge_color = f'rgb({r},{g},{b})'
+        else:
+            edge_color = 'gray'
+
         edge_traces.append(go.Scatter3d(
             x=[start[0], end[0]],
             y=[start[1], end[1]],
             z=[start[2], end[2]],
             mode='lines',
-            line=dict(color='gray', width=3),
+            line=dict(color=edge_color, width=3),
             hoverinfo='none'
         ))
 
-        # Flecha triangular al final de la arista
         vec = end - start
         vec_len = np.linalg.norm(vec)
         if vec_len > 0:
@@ -48,15 +65,13 @@ def generar_fig(nodo_seleccionado=None):
                 x=[end[0], tip1[0], tip2[0]],
                 y=[end[1], tip1[1], tip2[1]],
                 z=[end[2], tip1[2], tip2[2]],
-                color='skyblue',
+                color=edge_color,
                 opacity=0.8,
                 hoverinfo='none'
             ))
 
     colores = ['skyblue'] * len(nodes)
     if nodo_seleccionado is not None:
-        distances = nx.single_source_shortest_path_length(G, nodo_seleccionado)
-        max_dist = max(distances.values()) if distances else 1
         for i, n in enumerate(nodes):
             if n == nodo_seleccionado:
                 colores[i] = 'rgb(255,0,0)'
