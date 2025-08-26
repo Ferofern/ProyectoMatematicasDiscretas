@@ -18,7 +18,7 @@ G.add_edges_from(edges)
 centralidad = nx.eigenvector_centrality_numpy(G)
 
 # Multiplicar centralidad por factor para apreciar decimales
-f = 100000
+f = 1000000000000
 centralidad = {k: v*f for k, v in centralidad.items()}
 
 nx.set_node_attributes(G, centralidad, "centralidad")
