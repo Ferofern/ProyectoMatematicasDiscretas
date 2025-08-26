@@ -36,17 +36,15 @@ def generar_fig(nodo_seleccionado=None):
     # Colores dinámicos usando BFS y degradado
     colores = ['skyblue'] * len(nodes)
     if nodo_seleccionado is not None:
-        # BFS para calcular distancias
         distances = nx.single_source_shortest_path_length(G, nodo_seleccionado)
         max_dist = max(distances.values()) if distances else 1
         for i, n in enumerate(nodes):
             if n == nodo_seleccionado:
-                colores[i] = 'rgb(255,0,0)'  # nodo seleccionado rojo
+                colores[i] = 'rgb(255,0,0)'
             elif n in distances:
-                # degradado rojo->naranja->más claro según distancia
                 ratio = distances[n] / max_dist
                 r = 255
-                g = int(165 * ratio)  # naranja = 255,165,0
+                g = int(165 * ratio)
                 b = 0
                 colores[i] = f'rgb({r},{g},{b})'
 
