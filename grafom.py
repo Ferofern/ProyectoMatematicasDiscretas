@@ -1,66 +1,74 @@
 import networkx as nx
-import csv
+import numpy as np
 import plotly.graph_objects as go
+import pandas as pd
+from http.server import SimpleHTTPRequestHandler, HTTPServer
+import plotly.io as pio
 
-# Listas para guardar remitentes y destinatarios
-enviados = []
-recibidos = []
+df = pd.read_excel('/workspaces/ProyectoMatematicasDiscretas/DatasetRelaciones.xlsx', header=0)
+enviados = df.iloc[:, 0].astype(str).str.strip().tolist()
+recibidos = df.iloc[:, 1].astype(str).str.strip().tolist()
 
-# Abrir CSV separado por ;
-with open('C:/Users/ferof/Downloads/DatasetRelaciones.csv', newline='', encoding='latin-1') as csvfile:
-    reader = csv.reader(csvfile, delimiter=';')
-    for row in reader:
-        if len(row) >= 2:
-            enviados.append(row[0].strip())
-            recibidos.append(row[1].strip())
-
-# Crear grafo dirigido
 G = nx.DiGraph()
-for i in range(len(enviados)):
-    if enviados[i] and recibidos[i]:
-        G.add_edge(enviados[i], recibidos[i])
+for e, r in zip(enviados, recibidos):
+    G.add_edge(e, r)
 
-# Layout 3D
 pos = nx.spring_layout(G, dim=3, seed=42)
-
-# Coordenadas nodos
 x_nodes = [pos[node][0] for node in G.nodes()]
 y_nodes = [pos[node][1] for node in G.nodes()]
 z_nodes = [pos[node][2] for node in G.nodes()]
 
-# Calcular grados de salida ajustados (-1)
-out_degrees = {n: max(G.out_degree(n) - 1, 0) for n in G.nodes()}
+edge_traces = []
+arrow_size = 0.05
 
-# Aristas
-edge_x, edge_y, edge_z = [], [], []
 for edge in G.edges():
-    x0, y0, z0 = pos[edge[0]]
-    x1, y1, z1 = pos[edge[1]]
-    edge_x += [x0, x1, None]
-    edge_y += [y0, y1, None]
-    edge_z += [z0, z1, None]
+    start = np.array(pos[edge[0]])
+    end = np.array(pos[edge[1]])
+    edge_traces.append(go.Scatter3d(
+        x=[start[0], end[0]],
+        y=[start[1], end[1]],
+        z=[start[2], end[2]],
+        mode='lines',
+        line=dict(color='gray', width=3),
+        hoverinfo='none'
+    ))
+    vec = end - start
+    vec_len = np.linalg.norm(vec)
+    if vec_len == 0:
+        continue
+    vec_dir = vec / vec_len
+    perp1 = np.cross(vec_dir, np.array([0, 0, 1]))
+    if np.linalg.norm(perp1) < 1e-6:
+        perp1 = np.cross(vec_dir, np.array([0, 1, 0]))
+    perp1 = perp1 / np.linalg.norm(perp1)
+    perp2 = np.cross(vec_dir, perp1)
+    perp2 = perp2 / np.linalg.norm(perp2)
+    tip1 = end - vec_dir * arrow_size + 0.5 * arrow_size * perp1
+    tip2 = end - vec_dir * arrow_size - 0.5 * arrow_size * perp1
+    mesh = go.Mesh3d(
+        x=[end[0], tip1[0], tip2[0]],
+        y=[end[1], tip1[1], tip2[1]],
+        z=[end[2], tip1[2], tip2[2]],
+        color='skyblue',
+        opacity=0.8,
+        hoverinfo='none'
+    )
+    edge_traces.append(mesh)
 
-edge_trace = go.Scatter3d(
-    x=edge_x, y=edge_y, z=edge_z,
-    mode='lines',
-    line=dict(color='gray', width=2),
-    hoverinfo='none'
-)
-
-# Nodos con tooltip de aristas de salida
+out_degrees = {n: max(G.out_degree(n) - 1, 0) for n in G.nodes()}
 node_trace = go.Scatter3d(
     x=x_nodes, y=y_nodes, z=z_nodes,
     mode='markers+text',
-    text=[str(node) for node in G.nodes()],  # etiqueta sobre nodo
+    text=[str(node) for node in G.nodes()],
     textposition="top center",
     marker=dict(size=8, color='skyblue', line=dict(width=1, color='black')),
     hoverinfo="text",
     hovertext=[f"Nodo: {node}<br>Aristas salida ajustadas: {out_degrees[node]}" for node in G.nodes()]
 )
 
-fig = go.Figure(data=[edge_trace, node_trace])
+fig = go.Figure(data=edge_traces + [node_trace])
 fig.update_layout(
-    title="Grafo Dirigido en 3D (con hover info)",
+    title="Grafo Dirigido en 3D (flechas rellenas)",
     showlegend=False,
     margin=dict(l=0, r=0, b=0, t=40),
     scene=dict(
@@ -70,5 +78,9 @@ fig.update_layout(
     )
 )
 
-# 👉 Abre en navegador
-fig.show(renderer="browser")
+pio.write_html(fig, file='/workspaces/ProyectoMatematicasDiscretas/grafo.html', auto_open=False)
+port = 8080
+server_address = ("", port)
+httpd = HTTPServer(server_address, SimpleHTTPRequestHandler)
+print(f"Sirviendo en http://localhost:{port}/grafo.html")
+httpd.serve_forever()
