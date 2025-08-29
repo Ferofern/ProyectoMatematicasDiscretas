@@ -56,8 +56,7 @@ python3 -m UI.dash_app & python3 -m UI.grafo3d_dash & wait
 **Liberar puertos al finalizar:**
 
 ```bash
-fuser -k 8080/tcp
-fuser -k 8081/tcp
+./cerrar_puertos.sh
 ```
 
 ---
