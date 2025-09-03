@@ -50,7 +50,7 @@ pip install -r requirements.txt
 Ejecutar ambos módulos en paralelo:
 
 ```bash
-python3 -m UI.dash_app & python3 -m UI.grafo3d_dash & wait
+./rusn.sh
 ```
 
 **Liberar puertos al finalizar:**
