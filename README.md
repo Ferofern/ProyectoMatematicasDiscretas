@@ -47,7 +47,7 @@ pip install -r requirements.txt
 
 ### Ejecución
 
-Ejecutar ambos módulos en paralelo:
+Ejecutar los tres módulos en paralelo:
 
 ```bash
 ./run.sh
@@ -75,6 +75,7 @@ ProyectoMatematicasDiscretas/
 │
 │── requirements.txt
 │── README.md
+-Bash
 ```
 
 ---
