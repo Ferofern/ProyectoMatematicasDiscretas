@@ -50,7 +50,7 @@ pip install -r requirements.txt
 Ejecutar ambos módulos en paralelo:
 
 ```bash
-./rusn.sh
+./run.sh
 ```
 
 **Liberar puertos al finalizar:**
